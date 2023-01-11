@@ -37,8 +37,6 @@ std::unique_ptr<T[]> make_uptr_arr(const U *const raw, const size_t len) {
 */
 template <char... chars>
 struct T_string {
-  /* static constexpr size_t size = sizeof...(chars);*/
-  /* static constexpr const char *const arr = {chars...}; */
   static constexpr const std::array<char, sizeof...(chars)> arr{chars...};
   constexpr operator std::string_view() { return std::string_view(arr.data(), sizeof...(chars)); }
 };
@@ -134,9 +132,6 @@ struct decl_opts {
   using parse_arr_t = std::array<parse_fn_t, sizeof...(TsOptions)>;
   using opts_map_t = std::unordered_map<std::string_view, std::any>;
 
-  // using cmp_fn_t = bool (*)(const std::string_view opt);
-  // using cmp_arr_t = std::array<cmp_fn_t, sizeof...(TsOptions)>;
-
   parse_arr_t parse_arr;
 
   constexpr decl_opts() : parse_arr{make_parse_arr()} {}
@@ -161,26 +156,15 @@ struct decl_opts {
     return make_parse_arr_impl(sequence_t{});
   }
 
-  /*
-  template <size_t... Is>
-  constexpr cmp_arr_t make_cmp_arr_impl(const std::index_sequence<Is...>) {
-    return {
-      +[](const std::string_view opt) {
-        return opt == typename TsOptions::brief_name_t{} || opt == typename TsOptions::full_name_t{};
-      }...
-    };
-  }
-
-  constexpr cmp_arr_t make_cmp_arr() const {
-    return make_cmp_arr_impl(sequence_t{});
-  }
-  */
-
-  // should prooobably make this less horrific
   template <size_t... Is>
   constexpr size_t index_impl(const std::index_sequence<Is...>, const std::string_view opt) const {
     size_t idx {sizeof...(Is)};
-    (..., ((opt == typename TsOptions::brief_name_t{} || opt == typename TsOptions::full_name_t{}) ? (void)(idx = Is) : (void)0));
+    ([=, &idx]() {
+      if (opt == typename TsOptions::brief_name_t{} || opt == typename TsOptions::full_name_t{}) {
+        idx = Is;
+      }
+    }
+    (), ...);
     return idx;
   }
 
@@ -252,5 +236,6 @@ int main(int argc, char** argv) {
     .add<int>("-f"_opt, "-first"_opt)
     .add<double>("-s"_opt, "-second"_opt);
   const auto parsed = opts.parse(argc, argv);
-  std::cout << parsed["-f"_opt] << parsed["-s"_opt] << std::endl;
+  std::cout << parsed["-f"_opt] << std::endl;
+  std::cout << parsed["-s"_opt] << std::endl;
 }
