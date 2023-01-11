@@ -70,6 +70,14 @@ struct option<T, T_string<brief...>, T_string<full...>> {
   using full_name_t = T_string<full...>;
 };
 
+/*
+ * 'getter' uses CRTP to inject operator[] definitions into the derived
+ * class; this is a way of defining member functions by expanding a param
+ * pack (two functions for each option)
+ *
+ * this should not be thought of as an independent class
+*/
+
 template<typename Derived, typename Opt>
 struct getter {
   using brief_opt_t = typename Opt::brief_name_t;
@@ -89,6 +97,12 @@ struct getter {
   }
 };
 
+/*
+ * 'parsed_opts' inherits overloaded getters for each option
+ * the params that select overloads are the T_strings for each
+ * option
+ */
+
 template <typename... Opts>
 class parsed_opts : public getter<parsed_opts<Opts...>, Opts>... {
 private:
@@ -98,6 +112,15 @@ public:
   const OptsMap res;
   parsed_opts(const OptsMap& res) : res{res} {}
 };
+
+/*
+ * 'decl_opts' allows the user to declare a typed parameter list with
+ * long and short names, parsed in the style of a command line parser
+ *
+ * params are added using chained 'add'
+ *
+ * the result object is obtained with the 'parse' method
+ */
 
 template <typename... TsOptions>
 struct decl_opts {
@@ -223,7 +246,7 @@ struct decl_opts {
 
 };
 
-// ./a.out -first=2 -second=3.14
+// example program usage: ./a.out -first=2 -second=3.14
 int main(int argc, char** argv) {
   constexpr const auto opts = decl_opts{}
     .add<int>("-f"_opt, "-first"_opt)
